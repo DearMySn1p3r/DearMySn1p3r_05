@@ -99,6 +99,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: nowrap; /* 캡처 시 레이아웃 무너짐 방지 */
         }
 
         .post-author {
@@ -106,6 +107,7 @@
             font-size: 16px;
             font-weight: 800;
             color: var(--text-dark);
+            white-space: nowrap; /* 캡처 시 이름 줄바꿈 방지 */
         }
 
         .post-date {
@@ -113,6 +115,7 @@
             font-size: 13px;
             color: var(--text-gray);
             font-weight: 500;
+            white-space: nowrap; /* 캡처 시 날짜 줄바꿈 방지 */
         }
 
         .post-tag-badge {
@@ -124,6 +127,7 @@
             border-radius: 8px;
             font-weight: 700;
             margin-top: 2px;
+            white-space: nowrap; /* 캡처 시 태그 줄바꿈 방지 */
         }
         
         .post-actions { display: flex; gap: 8px; }
@@ -132,9 +136,7 @@
         .post-action-btn.delete:hover { color: #ff5252; }
 
         .post-content h3 { font-size: 20px; margin: 0 0 12px 0; line-height: 1.4; }
-        /* 본문 아래 여백 수정 */
         .post-text { font-size: 16px; line-height: 1.7; margin-bottom: 24px; white-space: pre-wrap; }
-        /* 이미지 위 여백(margin-top: 30px) 추가로 간격 넓힘 */
         .post-image { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-md); margin-top: 30px; margin-bottom: 24px; border: 1px solid var(--border-light); display: block; }
         
         .stats-row { display: flex; gap: 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-gray); font-weight: 500; }
@@ -377,22 +379,23 @@
             const commentInput = target.querySelector('.comment-input-wrap');
             const commentsBox = target.querySelector('.comments-box'); 
 
-            if(postActions) postActions.style.visibility = 'hidden';
+            // visibility hidden 대신 display none으로 아예 공간까지 제거
+            if(postActions) postActions.style.display = 'none';
             if(btnGroup) btnGroup.style.display = 'none';
             if(commentInput) commentInput.style.display = 'none';
-            commentActions.forEach(a => a.style.visibility = 'hidden');
+            commentActions.forEach(a => a.style.display = 'none');
 
             if(commentsBox && post.comments.length === 0) {
                 commentsBox.style.display = 'none';
             }
 
-            // 해상도 향상을 위해 pixelRatio 옵션 유지
             htmlToImage.toPng(target, { backgroundColor: bgColor, pixelRatio: 2 })
             .then(function (dataUrl) {
-                if(postActions) postActions.style.visibility = 'visible';
+                // 캡처 후 다시 노출 (flex 유지)
+                if(postActions) postActions.style.display = 'flex';
                 if(btnGroup) btnGroup.style.display = 'flex';
                 if(commentInput) commentInput.style.display = 'flex';
-                commentActions.forEach(a => a.style.visibility = 'visible');
+                commentActions.forEach(a => a.style.display = 'flex');
                 
                 if(commentsBox) {
                     commentsBox.style.display = 'block'; 
