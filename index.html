@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프리미엄 익명 커뮤니티</title>
+    <title>ANONYMOUS SPACE</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
@@ -51,6 +51,8 @@
         #imgPreview { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 15px; display: none; border: 1px solid var(--border-light); }
         
         .editor-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light); }
+        .editor-actions-right { display: flex; gap: 8px; }
+        
         .tool-icon-btn { color: var(--text-gray); font-size: 20px; cursor: pointer; background: var(--accent-soft); width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
         .tool-icon-btn:hover { background: var(--border-light); color: var(--primary-blue); transform: scale(1.05); }
 
@@ -125,17 +127,22 @@
         }
         
         .post-actions { display: flex; gap: 8px; }
-        .post-action-btn { background: var(--accent-soft); border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text-gray); cursor: pointer; }
+        .post-action-btn { background: var(--accent-soft); border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text-gray); cursor: pointer; transition: 0.2s; }
+        .post-action-btn.edit:hover { color: var(--primary-blue); }
         .post-action-btn.delete:hover { color: #ff5252; }
 
         .post-content h3 { font-size: 20px; margin: 0 0 12px 0; line-height: 1.4; }
-        .post-text { font-size: 16px; line-height: 1.7; margin-bottom: 20px; white-space: pre-wrap; }
-        .post-image { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 20px; border: 1px solid var(--border-light); display: block; }
+        /* 본문 아래 여백 수정 */
+        .post-text { font-size: 16px; line-height: 1.7; margin-bottom: 24px; white-space: pre-wrap; }
+        /* 이미지 위 여백(margin-top: 30px) 추가로 간격 넓힘 */
+        .post-image { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-md); margin-top: 30px; margin-bottom: 24px; border: 1px solid var(--border-light); display: block; }
         
         .stats-row { display: flex; gap: 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-gray); font-weight: 500; }
         .btn-group { display: flex; justify-content: space-between; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); padding: 10px 0; margin-bottom: 20px; }
-        .icon-btn { background: none; border: none; color: var(--text-gray); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; cursor: pointer; flex: 1; }
-        .icon-btn i { font-size: 20px; color: var(--text-dark); }
+        .icon-btn { background: none; border: none; color: var(--text-gray); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; cursor: pointer; flex: 1; transition: 0.2s; }
+        .icon-btn:hover { color: var(--primary-blue); }
+        .icon-btn i { font-size: 20px; color: var(--text-dark); transition: 0.2s; }
+        .icon-btn:hover i { color: var(--primary-blue); }
 
         .comments-box { background: var(--accent-soft); border-radius: var(--radius-md); padding: 16px; transition: background-color 0.3s; margin-top: 15px; }
         .chat-bubble { display: flex; flex-direction: column; margin-bottom: 12px; }
@@ -157,7 +164,7 @@
 
     <div class="main-wrapper">
         <nav class="top-nav">
-            <div class="logo">匿名 SPACE</div>
+            <div class="logo">ANONYMOUS SPACE</div>
             <div class="nav-actions">
                 <i class="ri-moon-line" id="themeToggle" style="font-size: 22px; cursor: pointer;" onclick="toggleDarkMode()"></i>
                 <i class="ri-notification-3-line" style="font-size: 22px; cursor: pointer;" onclick="showNotification()"></i>
@@ -181,7 +188,9 @@
             <div class="editor-actions">
                 <label for="imageUpload" class="tool-icon-btn"><i class="ri-image-add-line"></i></label>
                 <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
-                <button class="btn-post" onclick="createPost()">게시하기</button>
+                <div class="editor-actions-right" id="editorActionBtns">
+                    <button class="btn-post" id="submitPostBtn" onclick="createPost()">게시하기</button>
+                </div>
             </div>
         </div>
 
@@ -192,6 +201,7 @@
         let posts = [];
         let currentImageBase64 = null; 
         let selectedTag = '☕ 일상';
+        let editingPostId = null; 
 
         window.onload = renderPosts;
 
@@ -235,10 +245,9 @@
             }
         }
 
-        // 🔥 무작위로 진짜 같은 과거 시간 생성 (1분 전 ~ 3일 전)
         function getRandomTime() {
             const now = new Date();
-            const randomOffset = Math.floor(Math.random() * 3 * 24 * 60 * 60 * 1000); // 0~3일(밀리초)
+            const randomOffset = Math.floor(Math.random() * 3 * 24 * 60 * 60 * 1000);
             const pastDate = new Date(now.getTime() - randomOffset);
             
             const diffMs = now - pastDate;
@@ -264,22 +273,97 @@
             const content = document.getElementById('postContent').value.trim();
             if (!title || !content) return alert('내용을 채워주세요!');
             
-            posts.unshift({
-                id: Date.now(), 
-                tag: selectedTag, 
-                title, 
-                content, 
-                image: currentImageBase64,
-                author: '익명사용자', 
-                views: Math.floor(Math.random() * 500) + 10, 
-                likes: Math.floor(Math.random() * 150), 
-                bookmarks: Math.floor(Math.random() * 30), 
-                date: getRandomTime(), // 🔥 랜덤 시간 적용
-                comments: []
-            });
-            document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = '';
-            document.getElementById('imgPreview').style.display = 'none'; currentImageBase64 = null;
+            if (editingPostId) {
+                const post = posts.find(p => p.id === editingPostId);
+                if (post) {
+                    post.title = title;
+                    post.content = content;
+                    post.tag = selectedTag;
+                    post.image = currentImageBase64;
+                }
+                cancelEdit(); 
+            } else {
+                posts.unshift({
+                    id: Date.now(), 
+                    tag: selectedTag, 
+                    title, 
+                    content, 
+                    image: currentImageBase64,
+                    author: '익명사용자', 
+                    views: Math.floor(Math.random() * 500) + 10, 
+                    likes: Math.floor(Math.random() * 150), 
+                    bookmarks: Math.floor(Math.random() * 30), 
+                    date: getRandomTime(), 
+                    comments: []
+                });
+                
+                document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = '';
+                document.getElementById('imgPreview').style.display = 'none'; currentImageBase64 = null;
+            }
             renderPosts();
+        }
+
+        function editPost(id) {
+            const post = posts.find(p => p.id === id);
+            if (!post) return;
+
+            editingPostId = id;
+            
+            document.getElementById('postTitle').value = post.title;
+            document.getElementById('postContent').value = post.content;
+            
+            currentImageBase64 = post.image;
+            if (post.image) {
+                document.getElementById('imgPreview').src = post.image;
+                document.getElementById('imgPreview').style.display = 'block';
+            } else {
+                document.getElementById('imgPreview').src = '';
+                document.getElementById('imgPreview').style.display = 'none';
+            }
+
+            const tags = document.querySelectorAll('#tagList .tag-chip');
+            tags.forEach(c => {
+                c.classList.remove('active');
+                if (c.innerText === post.tag) {
+                    c.classList.add('active');
+                    selectedTag = post.tag;
+                }
+            });
+
+            const submitBtn = document.getElementById('submitPostBtn');
+            submitBtn.innerText = '수정완료';
+            submitBtn.style.background = 'linear-gradient(135deg, #34c759, #28a745)';
+
+            if (!document.getElementById('cancelEditBtn')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancelEditBtn';
+                cancelBtn.className = 'btn-post';
+                cancelBtn.style.background = 'var(--text-gray)';
+                cancelBtn.innerText = '취소';
+                cancelBtn.onclick = cancelEdit;
+                document.getElementById('editorActionBtns').prepend(cancelBtn);
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingPostId = null;
+            
+            document.getElementById('postTitle').value = '';
+            document.getElementById('postContent').value = '';
+            document.getElementById('imgPreview').style.display = 'none';
+            currentImageBase64 = null;
+            
+            const firstTag = document.querySelector('#tagList .tag-chip');
+            selectTag(firstTag, firstTag.innerText);
+            
+            const submitBtn = document.getElementById('submitPostBtn');
+            submitBtn.innerText = '게시하기';
+            submitBtn.style.background = 'var(--primary-gradient)';
+            
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            if (cancelBtn) cancelBtn.remove();
         }
 
         function capturePost(id) {
@@ -302,7 +386,8 @@
                 commentsBox.style.display = 'none';
             }
 
-            htmlToImage.toPng(target, { backgroundColor: bgColor })
+            // 해상도 향상을 위해 pixelRatio 옵션 유지
+            htmlToImage.toPng(target, { backgroundColor: bgColor, pixelRatio: 2 })
             .then(function (dataUrl) {
                 if(postActions) postActions.style.visibility = 'visible';
                 if(btnGroup) btnGroup.style.display = 'flex';
@@ -361,11 +446,29 @@
                                     <span class="post-tag-badge">${post.tag}</span>
                                 </div>
                             </div>
-                            <div class="post-actions"><button class="post-action-btn delete" onclick="deletePost(${post.id})">삭제</button></div>
+                            <div class="post-actions">
+                                <button class="post-action-btn edit" onclick="editPost(${post.id})">수정</button>
+                                <button class="post-action-btn delete" onclick="deletePost(${post.id})">삭제</button>
+                            </div>
                         </div>
                         <div class="post-content"><h3>${post.title}</h3><div class="post-text">${post.content}</div></div>
                         ${imageHtml}
-                        <div class="stats-row"><span><i class="ri-eye-line"></i> ${post.views}</span><span><i class="ri-heart-fill" style="color:#ff5252;"></i> ${post.likes}</span><span><i class="ri-bookmark-fill" style="color:#ffb300;"></i> ${post.bookmarks}</span></div>
+                        
+                        <div class="stats-row">
+                            <span style="display:flex; align-items:center; gap:4px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+                                ${post.views}
+                            </span>
+                            <span style="display:flex; align-items:center; gap:4px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#ff5252"><path d="M12.001 4.529c2.349-2.109 5.979-2.039 8.242.228 2.262 2.268 2.34 5.88.236 8.236l-8.48 8.492-8.478-8.492c-2.104-2.356-2.025-5.974.236-8.236 2.265-2.264 5.888-2.34 8.244-.228z"/></svg>
+                                ${post.likes}
+                            </span>
+                            <span style="display:flex; align-items:center; gap:4px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#ffb300"><path d="M5 2h14a1 1 0 0 1 1 1v19.143a.5.5 0 0 1-.766.424L12 18.03l-7.234 4.536A.5.5 0 0 1 4 22.143V3a1 1 0 0 1 1-1z"/></svg>
+                                ${post.bookmarks}
+                            </span>
+                        </div>
+
                         <div class="btn-group">
                             <button class="icon-btn" onclick="alert('복사됨')"><i class="ri-share-forward-line"></i>공유</button>
                             <button class="icon-btn" onclick="capturePost(${post.id})"><i class="ri-screenshot-2-line"></i>캡처</button>
