@@ -111,6 +111,9 @@ textarea.field{height:auto;padding:12px 14px;line-height:1.65;resize:none;min-he
 .cm-meta .stat input{font-size:13px}
 .add{width:100%;height:44px;margin-top:16px;border-radius:12px;border:1px solid var(--line);font-size:13.5px;font-weight:600;color:var(--ink);transition:.15s}
 .add:hover{border-color:var(--ink)}
+.reset-blk{padding-top:24px;border-top:1px solid var(--line)}
+.reset{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);font-size:13.5px;font-weight:600;color:var(--pink);transition:.15s}
+.reset:hover{border-color:var(--pink);background:rgba(240,86,122,.05)}
 .blank{padding:8px 0 4px;color:var(--mute);font-size:13px;line-height:1.6}
 
 /* style tab */
@@ -443,6 +446,10 @@ function V_look(){
   </div>
   <div class="blk">
     <label class="switch">카드 아래 로고 넣기<input type="checkbox" data-k="mark" ${S.mark?'checked':''}><i></i></label>
+  </div>
+  <div class="blk reset-blk">
+    <button class="reset" data-act="resetAll">모든 내용 초기화</button>
+    <p class="hint">글, 사진, 반응 수치, 댓글이 모두 지워져요. 카드 설정과 OOC 문구는 그대로 남아요.</p>
   </div>`;
 }
 function V_ooc(){
@@ -500,6 +507,11 @@ const A={
     [C[i],C[j]]=[C[j],C[i]];
     renderPanel(true);paint();
     document.querySelectorAll('.cm')[j]?.scrollIntoView({block:'nearest',behavior:'smooth'});},
+  resetAll:()=>{
+    if(!confirm('글, 사진, 반응 수치, 댓글을 모두 지우고 처음 상태로 돌릴까요? 되돌릴 수 없어요.'))return;
+    const keep={dark:S.dark,scale:S.scale,mark:S.mark,ooc:S.ooc};
+    S={...JSON.parse(JSON.stringify(DEFAULT)),...keep};
+    tab='post';renderPanel();$('#pbody').scrollTop=0;paint();toast('모든 내용을 초기화했어요');},
   who:el=>{S.comments[+el.dataset.i].au=el.dataset.v==='1';renderPanel(true);paint();},
   addC:()=>{S.comments.push({text:'',time:'방금 전',likes:0,au:false});renderPanel(true);paint();
     const all=document.querySelectorAll('.cm');const last=all[all.length-1];
