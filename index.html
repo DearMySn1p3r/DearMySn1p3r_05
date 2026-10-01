@@ -266,11 +266,10 @@ const C_COLORS=['#7c8cf0','#3fae84','#e9a93a','#9479e8','#5bb2e6','#e5805f','#ea
 const TIMES=['방금 전','2분 전','8분 전','23분 전','47분 전','1시간 전','3시간 전','어제 21:14','어제 23:52'];
 const STORE='anon-space-maker';
 const MARK=`<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="10" fill="#19191d"/><rect x="7" y="8" width="18" height="13" rx="6.5" fill="#fff"/><path d="M10.5 19.5v5.5l5-4z" fill="#fff"/><circle cx="13" cy="14.5" r="1.5" fill="#19191d"/><circle cx="19" cy="14.5" r="1.5" fill="#19191d"/><circle cx="25.5" cy="7" r="2.6" fill="#f0567a" stroke="#19191d" stroke-width="1.6"/></svg>`;
-const OOC_DEFAULT=`*[OOC: 진행 중인 RP를 잠시 멈추고, 이번 응답은 익명 커뮤니티 게시글 형식으로 작성한다. NPC와 PC를 지켜본 주변 사람이 익명으로 올린 글이라고 가정한다. 글쓴이는 두 사람과 친하지 않은 제3자로, 직접 본 장면과 건너 들은 이야기만 말한다. 두 사람의 관계를 단정하지 말고, 사소한 행동·눈빛·말투에서 새어 나오는 분위기를 구체적으로 묘사해 읽는 사람이 스스로 눈치채게 한다. 실제 익명 커뮤니티처럼 가볍고 짧은 말투를 쓰고, 본문은 5~8줄 안으로 간결하게 쓴다. 댓글은 3~6개로, 공감·추측·농담·추가 목격담처럼 반응을 다양하게 섞는다. 그중 하나는 당사자가 단 듯한 애매한 댓글이어도 좋다.
-· 주제: (일상 / 플러피 / 핫이슈 / 고민 / 연애 / 직장 중 하나)
-· 제목:
-· 본문:
-· 댓글:]*`;
+const OOC_DEFAULT=`*[OOC: 이전 RP 중지. 새로운 상황 전개. NPC/PC가 같은 대학에 다니는 학생으로 가정한다. 직접적인 서술이 아닌, 대학생 커뮤니티 형식으로, 두 사람 사이의 미묘한 분위기와 소문을 풀어낼 것. 캠퍼스에서 함께 있는 모습, 사소한 스킨십, 시험기간/축제/동아리/강의실/도서관 등 대학 생활 속 자연스러운 접점을 활용해 서술하되, 글쓴이는 어디까지나 목격담을 푸는 학생처럼 현실감 있게 말해야 한다. 각 게시글은 실제 대학 커뮤니티에 올라온 짧은 목격담처럼, 한눈에 읽히는 분량으로 간결하게 작성한다. 두 사람의 관계를 직접 단정 짓기보다는, 사소한 배려·숨길 수 없는 애정·묘한 긴장감 등을 통해 주변 사람들이 눈치챌 정도의 분위기를 담아라. 전체적으로 설렘과 현실감이 느껴지도록, 익명 커뮤니티 감성을 살려 마무리하시오.
+· 각 게시글 제목:
+· 본문 내용:
+· 댓글 반응:]*`;
 const DEFAULT={topic:'daily',author:'',title:'',body:'',img:null,time:'방금 전',views:0,likes:0,saves:0,
   comments:[],dark:false,scale:2,mark:true,ooc:OOC_DEFAULT};
 let S=JSON.parse(JSON.stringify(DEFAULT)), tab='post';
@@ -285,7 +284,7 @@ const dot=c=>`<span class="dot" style="background:${c}"></span>`;
 const topicOf=id=>TOPICS.find(t=>t.id===id)||TOPICS[0];
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2000);}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){try{localStorage.setItem(STORE,JSON.stringify({...S,img:null}));}catch(_){}}}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d){S={...DEFAULT,...d};if(String(S.ooc).includes('{{char}}'))S.ooc=OOC_DEFAULT;}}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d){S={...DEFAULT,...d};if(/\{\{char\}\}|이번 응답은 익명 커뮤니티 게시글 형식으로|같은 생활권\(학교·직장·동네 등\)/.test(String(S.ooc)))S.ooc=OOC_DEFAULT;}}catch(e){}}
 // color-mix 를 못 쓰는 브라우저와 이미지 저장에서도 같은 색이 나오도록 JS 로 연한 색을 계산
 function tint(hex,a){const bg=S.dark?[24,24,28]:[255,255,255],n=parseInt(hex.slice(1),16),c=[n>>16,(n>>8)&255,n&255];
   return `rgb(${c.map((v,i)=>Math.round(v*a+bg[i]*(1-a))).join(',')})`;}
@@ -418,7 +417,7 @@ function V_ooc(){
     <button class="solid" data-act="copyOoc">${ic('copy')}프롬프트 복사</button>
     <button class="line" data-act="resetOoc">기본값으로</button>
   </div>
-  <div class="ooc-steps"><b>쓰는 법</b><br>프롬프트를 복사해 RP 대화창에 보내고, 받은 제목·본문·댓글을 글 탭과 댓글 탭에 옮겨 적으면 돼요. 내용은 자유롭게 고쳐 쓸 수 있어요.</div>`;
+  <div class="ooc-steps"><b>쓰는 법</b><br>프롬프트를 복사해 RP 대화창에 보내면 게시글이 여러 개 나와요. 마음에 드는 글을 골라 제목·본문은 글 탭에, 댓글은 댓글 탭에 옮겨 적으면 돼요. 내용은 자유롭게 고쳐 쓸 수 있어요.</div>`;
 }
 function renderPanel(keepScroll){
   const b=$('#pbody'),y=b.scrollTop;
