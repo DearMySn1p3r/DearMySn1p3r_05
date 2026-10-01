@@ -92,10 +92,15 @@ textarea.field{height:auto;padding:12px 14px;line-height:1.65;resize:none;min-he
 .cm:first-child{padding-top:0}
 .cm-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .cm-av{width:18px;height:18px;border-radius:50%;flex:none}
-.cm-name{font-size:13px;font-weight:600;flex:1}
+.cm-name{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .who{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .who button{height:26px;padding:0 9px;font-size:11.5px;font-weight:500;color:var(--mute)}
 .who button.on{background:var(--ink);color:#fff}
+.mv{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mv button{width:26px;height:26px;display:grid;place-items:center;font-size:14px;color:var(--ink-2)}
+.mv button+button{border-left:1px solid var(--line)}
+.mv button:hover:not(:disabled){background:var(--field);color:var(--ink)}
+.mv button:disabled{color:#d4d4da;cursor:default}
 .cm-del{font-size:12px;color:var(--mute);padding:0 2px 0 6px}
 .cm-del:hover{color:var(--pink)}
 .cm textarea.field{min-height:46px;font-size:14px;padding:10px 12px}
@@ -249,6 +254,8 @@ const PATHS={
   bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   user:'<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c0-4.1 3.4-6.5 7.5-6.5s7.5 2.4 7.5 6.5z"/>',
+  up:'<path d="m6 15 6-6 6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
 };
 const ic=(n,fill)=>`<svg class="ico${fill?' fill':''}" viewBox="0 0 24 24" aria-hidden="true">${PATHS[n]||''}</svg>`;
@@ -263,7 +270,7 @@ const TOPICS=[
   {id:'love',  label:'연애',   color:'#ea6d9a'},
   {id:'work',  label:'직장',   color:'#3fae84'},
 ];
-const C_COLORS=['#7c8cf0','#3fae84','#e9a93a','#9479e8','#5bb2e6','#e5805f','#ea6d9a'];
+const C_COLORS=['#7c8cf0','#3fae84','#e9a93a','#9479e8','#5bb2e6','#e5805f','#ea6d9a','#8a9aa8'];
 const TIMES=['방금 전','2분 전','8분 전','23분 전','47분 전','1시간 전','3시간 전','어제 21:14','어제 23:52'];
 const STORE='anon-space-maker';
 const MARK=`<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="10" fill="#19191d"/><rect x="7" y="8" width="18" height="13" rx="6.5" fill="#fff"/><path d="M10.5 19.5v5.5l5-4z" fill="#fff"/><circle cx="13" cy="14.5" r="1.5" fill="#19191d"/><circle cx="19" cy="14.5" r="1.5" fill="#19191d"/><circle cx="25.5" cy="7" r="2.6" fill="#f0567a" stroke="#19191d" stroke-width="1.6"/></svg>`;
@@ -289,10 +296,13 @@ function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d
 // color-mix 를 못 쓰는 브라우저와 이미지 저장에서도 같은 색이 나오도록 JS 로 연한 색을 계산
 function tint(hex,a){const bg=S.dark?[24,24,28]:[255,255,255],n=parseInt(hex.slice(1),16),c=[n>>16,(n>>8)&255,n&255];
   return `rgb(${c.map((v,i)=>Math.round(v*a+bg[i]*(1-a))).join(',')})`;}
-const cColor=(c,i)=>c.au?topicOf(S.topic).color:C_COLORS[i%C_COLORS.length];
+function anonNo(i){let n=0;for(let j=0;j<=i;j++)if(!S.comments[j].au)n++;return n;}
+// 익명 번호마다 색이 고정되도록 (자리를 옮겨도 '익명1'은 늘 같은 색), 글쓴이 색과는 겹치지 않게
+function cColor(c,i){const tc=topicOf(S.topic).color;if(c.au)return tc;
+  const pal=C_COLORS.filter(x=>x!==tc);return pal[(anonNo(i)-1)%pal.length];}
 function cName(i){
   const c=S.comments[i];if(c.au)return S.author||'익명사용자';
-  let n=0;for(let j=0;j<=i;j++)if(!S.comments[j].au)n++;return `익명${n}`;
+  return `익명${anonNo(i)}`;
 }
 
 /* ───────── card ───────── */
@@ -379,6 +389,10 @@ function V_cmt(){
         <span class="cm-av" style="background:${cColor(c,i)}"></span>
         <span class="cm-name">${esc(cName(i))}</span>
         <div class="who"><button class="${c.au?'':'on'}" data-act="who" data-i="${i}" data-v="0">익명</button><button class="${c.au?'on':''}" data-act="who" data-i="${i}" data-v="1">글쓴이</button></div>
+        <span class="mv">
+          <button data-act="moveC" data-i="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="위로 옮기기">${ic('up')}</button>
+          <button data-act="moveC" data-i="${i}" data-d="1" ${i===S.comments.length-1?'disabled':''} aria-label="아래로 옮기기">${ic('down')}</button>
+        </span>
         <button class="cm-del" data-act="delC" data-i="${i}">삭제</button>
       </div>
       <textarea class="field" data-c="${i}" data-f="text" rows="1" placeholder="댓글 내용" aria-label="댓글 내용">${esc(c.text)}</textarea>
@@ -456,6 +470,12 @@ const A={
     const idx=S.comments.map(()=>rnd(0,TIMES.length-1)).sort((a,b)=>b-a);
     S.comments.forEach((c,i)=>{c.time=TIMES[idx[i]];c.likes=Math.random()>.35?rnd(1,40):0;});
     renderPanel(true);paint();toast('댓글 시간과 좋아요를 랜덤으로 채웠어요');},
+  moveC:el=>{
+    const i=+el.dataset.i,j=i+(+el.dataset.d),C=S.comments;
+    if(j<0||j>=C.length)return;
+    [C[i],C[j]]=[C[j],C[i]];
+    renderPanel(true);paint();
+    document.querySelectorAll('.cm')[j]?.scrollIntoView({block:'nearest',behavior:'smooth'});},
   who:el=>{S.comments[+el.dataset.i].au=el.dataset.v==='1';renderPanel(true);paint();},
   addC:()=>{S.comments.push({text:'',time:'방금 전',likes:0,au:false});renderPanel(true);paint();
     const all=document.querySelectorAll('.cm');const last=all[all.length-1];
