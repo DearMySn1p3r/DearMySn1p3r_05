@@ -296,12 +296,33 @@ function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d
 // color-mix 를 못 쓰는 브라우저와 이미지 저장에서도 같은 색이 나오도록 JS 로 연한 색을 계산
 function tint(hex,a){const bg=S.dark?[24,24,28]:[255,255,255],n=parseInt(hex.slice(1),16),c=[n>>16,(n>>8)&255,n&255];
   return `rgb(${c.map((v,i)=>Math.round(v*a+bg[i]*(1-a))).join(',')})`;}
+/* ───────── 시간 표기 ───────── */
+// '몇 분 전' 같은 표기 ↔ 지금으로부터 몇 분 전인지
+function fmtAgo(m){
+  if(m<1)return '방금 전';
+  if(m<60)return `${m}분 전`;
+  const now=new Date(),d=new Date(now-m*60000),z=n=>String(n).padStart(2,'0');
+  const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=Math.round((day(now)-day(d))/864e5),hm=`${z(d.getHours())}:${z(d.getMinutes())}`;
+  if(diff===0)return `${Math.floor(m/60)}시간 전`;
+  if(diff===1)return `어제 ${hm}`;
+  return `${z(d.getMonth()+1)}/${z(d.getDate())} ${hm}`;
+}
+function agoOf(t){
+  t=String(t||'').trim();const now=new Date();let r;
+  if(/^방금/.test(t))return 0;
+  if(r=t.match(/^(\d+)\s*분/))return +r[1];
+  if(r=t.match(/^(\d+)\s*시간/))return +r[1]*60;
+  if(r=t.match(/^어제\s*(\d{1,2}):(\d{2})/)){const d=new Date(now);d.setDate(d.getDate()-1);d.setHours(+r[1],+r[2],0,0);return Math.max(0,Math.round((now-d)/6e4));}
+  if(r=t.match(/^(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):(\d{2})/)){const d=new Date(now.getFullYear(),+r[1]-1,+r[2],+r[3],+r[4]);if(d>now)d.setFullYear(d.getFullYear()-1);return Math.round((now-d)/6e4);}
+  return null;
+}
 function anonNo(i){let n=0;for(let j=0;j<=i;j++)if(!S.comments[j].au)n++;return n;}
 // 익명 번호마다 색이 고정되도록 (자리를 옮겨도 '익명1'은 늘 같은 색), 글쓴이 색과는 겹치지 않게
 function cColor(c,i){const tc=topicOf(S.topic).color;if(c.au)return tc;
   const pal=C_COLORS.filter(x=>x!==tc);return pal[(anonNo(i)-1)%pal.length];}
 function cName(i){
-  const c=S.comments[i];if(c.au)return S.author||'익명사용자';
+  const c=S.comments[i];if(c.au)return S.author||'익명';
   return `익명${anonNo(i)}`;
 }
 
@@ -317,7 +338,7 @@ function cardHTML(){
     <div class="k-in">
       <div class="k-head">
         <div class="k-av" style="color:${t.color};background:${tint(t.color,.18)}">${ic('user',true)}</div>
-        <div class="k-who"><div class="k-name">${esc(S.author||'익명사용자')}</div>
+        <div class="k-who"><div class="k-name">${esc(S.author||'익명')}</div>
           <div class="k-meta">${esc(S.time)} · 조회 ${num(S.views)}</div></div>
         <span class="k-tag">${dot(t.color)}${t.label}</span>
       </div>
@@ -462,13 +483,16 @@ const A={
   theme:el=>{S.dark=el.dataset.v==='1';renderPanel(true);paint();},
   scale:el=>{S.scale=+el.dataset.v;renderPanel(true);save();},
   delImg:()=>{S.img=null;renderPanel(true);paint();},
-  roll:()=>{S.time=pick(TIMES);S.views=rnd(80,3000);S.likes=rnd(3,240);S.saves=rnd(0,40);
+  roll:()=>{S.time=fmtAgo(pick([rnd(1,59),rnd(60,600),rnd(600,2880)]));S.views=rnd(80,3000);S.likes=rnd(3,240);S.saves=rnd(0,40);
     renderPanel(true);paint();toast('반응 수치를 랜덤으로 채웠어요');},
   clearPost:()=>{if(!confirm('제목, 본문, 사진을 비울까요?'))return;S.title='';S.body='';S.img=null;renderPanel(true);paint();},
   rollC:()=>{
     // 위 댓글일수록 먼저 달린 것처럼 시간을 오래된 순으로 맞춘다
-    const idx=S.comments.map(()=>rnd(0,TIMES.length-1)).sort((a,b)=>b-a);
-    S.comments.forEach((c,i)=>{c.time=TIMES[idx[i]];c.likes=Math.random()>.35?rnd(1,40):0;});
+    // 글이 올라온 뒤부터 지금 사이에서 뽑고, 오래된 것부터 위에 오도록 정렬
+    const post=agoOf(S.time)??2880;
+    const lo=Math.max(0,post-2880); // 댓글은 글이 올라오고 이틀 안에 달린 것으로
+    const mins=S.comments.map(()=>rnd(lo,post)).sort((a,b)=>b-a);
+    S.comments.forEach((c,i)=>{c.time=fmtAgo(mins[i]);c.likes=Math.random()>.35?rnd(1,40):0;});
     renderPanel(true);paint();toast('댓글 시간과 좋아요를 랜덤으로 채웠어요');},
   moveC:el=>{
     const i=+el.dataset.i,j=i+(+el.dataset.d),C=S.comments;
