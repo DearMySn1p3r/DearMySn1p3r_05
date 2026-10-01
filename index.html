@@ -101,6 +101,12 @@ textarea.field{height:auto;padding:12px 14px;line-height:1.65;resize:none;min-he
 .mv button+button{border-left:1px solid var(--line)}
 .mv button:hover:not(:disabled){background:var(--field);color:var(--ink)}
 .mv button:disabled{color:#d4d4da;cursor:default}
+.cm.re{margin-left:8px;padding-left:12px;border-left:2px solid var(--line)}
+.cm-arr{color:var(--mute);font-size:14px;flex:none;margin-right:-2px}
+.add-re{display:inline-flex;align-items:center;gap:5px;margin-top:10px;height:28px;padding:0 10px;border-radius:8px;
+  font-size:12px;font-weight:600;color:var(--ink-2);background:var(--field);transition:.15s}
+.add-re .ico{font-size:13px}
+.add-re:hover{color:var(--ink);background:var(--line)}
 .cm-del{font-size:12px;color:var(--mute);padding:0 2px 0 6px}
 .cm-del:hover{color:var(--pink)}
 .cm textarea.field{min-height:46px;font-size:14px;padding:10px 12px}
@@ -180,6 +186,9 @@ textarea.field{height:auto;padding:12px 14px;line-height:1.65;resize:none;min-he
 .k-cmts{border-top:1px solid var(--k-line);padding:4px 26px}
 .k-c{display:flex;gap:11px;padding:16px 0}
 .k-c+.k-c{border-top:1px solid var(--k-line)}
+.k-c.re{padding-left:4px}
+.k-arr{color:var(--k-mute);font-size:15px;flex:none;margin-top:5px;margin-right:-3px}
+.k-c.re .k-cav{width:22px;height:22px;margin-top:2px}
 .k-cav{width:26px;height:26px;border-radius:50%;flex:none;background:color-mix(in srgb,var(--c) 22%,var(--k-bg))}
 .k-cm{flex:1;min-width:0}
 .k-cn{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
@@ -263,6 +272,7 @@ const PATHS={
   bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   user:'<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c0-4.1 3.4-6.5 7.5-6.5s7.5 2.4 7.5 6.5z"/>',
+  reply:'<path d="M9 7v6a3 3 0 0 0 3 3h7"/><path d="m15 12 4 4-4 4"/>',
   up:'<path d="m6 15 6-6 6 6"/>',
   down:'<path d="m6 9 6 6 6-6"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
@@ -301,7 +311,7 @@ const dot=c=>`<span class="dot" style="background:${c}"></span>`;
 const topicOf=id=>TOPICS.find(t=>t.id===id)||TOPICS[0];
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2000);}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){try{localStorage.setItem(STORE,JSON.stringify({...S,img:null}));}catch(_){}}}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d){S={...DEFAULT,...d};if(/\{\{char\}\}|이번 응답은 익명 커뮤니티 게시글 형식으로|같은 생활권\(학교·직장·동네 등\)[^]*\[게시글 1\]|NPC\/PC가 같은 대학에 다니는|같은 생활권\(학교·직장·동네 등\)|익명 커뮤니티에 올라온 게시글 형식으로 NPC와 PC/.test(String(S.ooc)))S.ooc=OOC_DEFAULT;}}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d){S={...DEFAULT,...d};S.comments=(S.comments||[]).map(c=>({...c,re:Array.isArray(c.re)?c.re:[]}));if(/\{\{char\}\}|이번 응답은 익명 커뮤니티 게시글 형식으로|같은 생활권\(학교·직장·동네 등\)[^]*\[게시글 1\]|NPC\/PC가 같은 대학에 다니는|같은 생활권\(학교·직장·동네 등\)|익명 커뮤니티에 올라온 게시글 형식으로 NPC와 PC/.test(String(S.ooc)))S.ooc=OOC_DEFAULT;}}catch(e){}}
 // color-mix 를 못 쓰는 브라우저와 이미지 저장에서도 같은 색이 나오도록 JS 로 연한 색을 계산
 function tint(hex,a){const bg=S.dark?[24,24,28]:[255,255,255],n=parseInt(hex.slice(1),16),c=[n>>16,(n>>8)&255,n&255];
   return `rgb(${c.map((v,i)=>Math.round(v*a+bg[i]*(1-a))).join(',')})`;}
@@ -326,23 +336,35 @@ function agoOf(t){
   if(r=t.match(/^(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):(\d{2})/)){const d=new Date(now.getFullYear(),+r[1]-1,+r[2],+r[3],+r[4]);if(d>now)d.setFullYear(d.getFullYear()-1);return Math.round((now-d)/6e4);}
   return null;
 }
-function anonNo(i){let n=0;for(let j=0;j<=i;j++)if(!S.comments[j].au)n++;return n;}
-// 익명 번호마다 색이 고정되도록 (자리를 옮겨도 '익명1'은 늘 같은 색), 글쓴이 색과는 겹치지 않게
-function cColor(c,i){const tc=topicOf(S.topic).color;if(c.au)return tc;
-  const pal=C_COLORS.filter(x=>x!==tc);return pal[(anonNo(i)-1)%pal.length];}
-function cName(i){
-  const c=S.comments[i];if(c.au)return S.author||'익명';
-  return `익명${anonNo(i)}`;
+/* 댓글 구조: S.comments = [{text,time,likes,au,re:[대댓글…]}]
+   위치(path)는 댓글이면 "3", 대댓글이면 "3.1" 처럼 적는다 */
+const getC=p=>{const [i,j]=String(p).split('.');return j===undefined?S.comments[+i]:S.comments[+i].re[+j];};
+const listOf=p=>{const [i,j]=String(p).split('.');return j===undefined?S.comments:S.comments[+i].re;};
+const idxOf=p=>+String(p).split('.').pop();
+// 화면에 보이는 순서(댓글 → 그 대댓글들 → 다음 댓글…)대로 펼치고 익명 번호를 매긴다
+function flat(){
+  const o=[];let n=0;
+  S.comments.forEach((c,i)=>{
+    o.push({c,p:`${i}`,re:false});
+    (c.re||[]).forEach((r,j)=>o.push({c:r,p:`${i}.${j}`,re:true}));
+  });
+  o.forEach(f=>{if(!f.c.au)f.no=++n;});
+  return o;
 }
+const total=()=>S.comments.reduce((n,c)=>n+1+(c.re||[]).length,0);
+// 익명 번호마다 색이 고정되도록 (자리를 옮겨도 '익명1'은 늘 같은 색), 글쓴이 색과는 겹치지 않게
+function cColor(f){const tc=topicOf(S.topic).color;if(f.c.au)return tc;
+  const pal=C_COLORS.filter(x=>x!==tc);return pal[(f.no-1)%pal.length];}
+const cName=f=>f.c.au?(S.author||'익명'):`익명${f.no}`;
 
 /* ───────── card ───────── */
 function cardHTML(){
   const t=topicOf(S.topic);
-  const cmts=S.comments.map((c,i)=>`
-    <div class="k-c"><span class="k-cav" style="background:${tint(cColor(c,i),.22)}"></span>
-      <div class="k-cm"><div class="k-cn">${esc(cName(i))}${c.au?'<small>글쓴이</small>':''}</div>
+  const cmts=flat().map(f=>{const c=f.c;return `
+    <div class="k-c ${f.re?'re':''}">${f.re?`<span class="k-arr">${ic('reply')}</span>`:''}<span class="k-cav" style="background:${tint(cColor(f),.22)}"></span>
+      <div class="k-cm"><div class="k-cn">${esc(cName(f))}${c.au?'<small>글쓴이</small>':''}</div>
       <div class="k-ct">${esc(c.text)||'&nbsp;'}</div>
-      <div class="k-cf"><span>${esc(c.time)}</span>${+c.likes>0?`<b>${ic('heart',true)}${num(c.likes)}</b>`:''}</div></div></div>`).join('');
+      <div class="k-cf"><span>${esc(c.time)}</span>${+c.likes>0?`<b>${ic('heart',true)}${num(c.likes)}</b>`:''}</div></div></div>`;}).join('');
   return `<div class="card ${S.dark?'dark':''} ${S.shadow?'':'flat'}" id="card">
     <div class="k-in">
       <div class="k-head">
@@ -356,7 +378,7 @@ function cardHTML(){
       ${S.img?`<img class="k-img" src="${S.img}" alt="">`:''}
       <div class="k-stats">
         <span class="lk">${ic('heart',true)}${num(S.likes)}</span>
-        <span>${ic('chat')}${S.comments.length}</span>
+        <span>${ic('chat')}${total()}</span>
         <span>${ic('bookmark')}${num(S.saves)}</span>
       </div>
     </div>
@@ -379,7 +401,7 @@ addEventListener('resize',fit);
 /* ───────── panel ───────── */
 const TABS=[['post','글'],['cmt','댓글'],['look','꾸미기'],['ooc','OOC']];
 function renderTabs(){
-  $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" data-act="tab" data-v="${k}">${l}${k==='cmt'&&S.comments.length?`<sup>${S.comments.length}</sup>`:''}</button>`).join('');
+  $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" data-act="tab" data-v="${k}">${l}${k==='cmt'&&total()?`<sup>${total()}</sup>`:''}</button>`).join('');
 }
 function V_post(){
   const has=!!S.img;
@@ -413,27 +435,33 @@ function V_post(){
   </div>`;
 }
 function V_cmt(){
-  const list=S.comments.map((c,i)=>`
-    <div class="cm">
+  const F=flat();
+  const one=f=>{
+    const c=f.c,p=f.p,i=idxOf(p),n=listOf(p).length;
+    return `
+    <div class="cm ${f.re?'re':''}">
       <div class="cm-top">
-        <span class="cm-av" style="background:${cColor(c,i)}"></span>
-        <span class="cm-name">${esc(cName(i))}</span>
-        <div class="who"><button class="${c.au?'':'on'}" data-act="who" data-i="${i}" data-v="0">익명</button><button class="${c.au?'on':''}" data-act="who" data-i="${i}" data-v="1">글쓴이</button></div>
+        <span class="cm-av" style="background:${cColor(f)}"></span>
+        <span class="cm-name">${esc(cName(f))}</span>
+        <div class="who"><button class="${c.au?'':'on'}" data-act="who" data-p="${p}" data-v="0">익명</button><button class="${c.au?'on':''}" data-act="who" data-p="${p}" data-v="1">글쓴이</button></div>
         <span class="mv">
-          <button data-act="moveC" data-i="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="위로 옮기기">${ic('up')}</button>
-          <button data-act="moveC" data-i="${i}" data-d="1" ${i===S.comments.length-1?'disabled':''} aria-label="아래로 옮기기">${ic('down')}</button>
+          <button data-act="moveC" data-p="${p}" data-d="-1" ${i===0?'disabled':''} aria-label="위로 옮기기">${ic('up')}</button>
+          <button data-act="moveC" data-p="${p}" data-d="1" ${i===n-1?'disabled':''} aria-label="아래로 옮기기">${ic('down')}</button>
         </span>
-        <button class="cm-del" data-act="delC" data-i="${i}">삭제</button>
+        <button class="cm-del" data-act="delC" data-p="${p}">삭제</button>
       </div>
-      <textarea class="field" data-c="${i}" data-f="text" rows="1" placeholder="댓글 내용" aria-label="댓글 내용">${esc(c.text)}</textarea>
+      <textarea class="field" data-c="${p}" data-f="text" rows="1" placeholder="${f.re?'대댓글 내용':'댓글 내용'}" aria-label="${f.re?'대댓글 내용':'댓글 내용'}">${esc(c.text)}</textarea>
       <div class="cm-meta">
-        <div class="stat"><label>시간</label><input data-c="${i}" data-f="time" value="${esc(c.time)}" placeholder="방금 전"></div>
-        <div class="stat"><label>좋아요</label><input data-c="${i}" data-f="likes" data-num value="${c.likes||''}" placeholder="0" inputmode="numeric"></div>
+        <div class="stat"><label>시간</label><input data-c="${p}" data-f="time" value="${esc(c.time)}" placeholder="방금 전"></div>
+        <div class="stat"><label>좋아요</label><input data-c="${p}" data-f="likes" data-num value="${c.likes||''}" placeholder="0" inputmode="numeric"></div>
       </div>
-    </div>`).join('');
+      ${f.re?'':`<button class="add-re" data-act="addRe" data-p="${p}">${ic('reply')}대댓글 달기</button>`}
+    </div>`;
+  };
+  const t=F.length;
   return `
-  ${S.comments.length?`<div class="blk-h"><h4>댓글 ${S.comments.length}개</h4><span class="tl-row"><button class="tl" data-act="rollC">시간·좋아요 랜덤</button><button class="tl" data-act="clearC">모두 삭제</button></span></div>`:''}
-  <div>${list||`<div class="blank">아직 댓글이 없어요.</div>`}</div>
+  ${t?`<div class="blk-h"><h4>댓글 ${t}개</h4><span class="tl-row"><button class="tl" data-act="rollC">시간·좋아요 랜덤</button><button class="tl" data-act="clearC">모두 삭제</button></span></div>`:''}
+  <div>${t?F.map(one).join(''):`<div class="blank">아직 댓글이 없어요.</div>`}</div>
   <button class="add" data-act="addC">+ 댓글 추가</button>`;
 }
 function V_look(){
@@ -488,7 +516,7 @@ document.addEventListener('input',e=>{
   let v=el.type==='checkbox'?el.checked:el.value;
   if(el.dataset.num!==undefined){v=v.replace(/\D/g,'').slice(0,7);el.value=v;v=+v||0;}
   if(el.dataset.k){S[el.dataset.k]=v;}
-  else if(el.dataset.c!==undefined){S.comments[+el.dataset.c][el.dataset.f]=v;}
+  else if(el.dataset.c!==undefined){getC(el.dataset.c)[el.dataset.f]=v;}
   else return;
   if(el.tagName==='TEXTAREA'&&!el.classList.contains('ooc'))grow(el);
   if(el.dataset.k==='ooc'){save();return;}
@@ -508,25 +536,32 @@ const A={
     // 글이 올라온 뒤부터 지금 사이에서 뽑고, 오래된 것부터 위에 오도록 정렬
     const post=agoOf(S.time)??2880;
     const lo=Math.max(0,post-2880); // 댓글은 글이 올라오고 이틀 안에 달린 것으로
-    const mins=S.comments.map(()=>rnd(lo,post)).sort((a,b)=>b-a);
-    S.comments.forEach((c,i)=>{c.time=fmtAgo(mins[i]);c.likes=Math.random()>.35?rnd(1,40):0;});
+    // 대댓글도 화면 순서대로 함께 — 대댓글은 원댓글보다 앞선 시간으로 안 나온다
+    const F=flat(),mins=F.map(()=>rnd(lo,post)).sort((a,b)=>b-a);
+    F.forEach((f,i)=>{f.c.time=fmtAgo(mins[i]);f.c.likes=Math.random()>(f.re?.5:.35)?rnd(1,f.re?15:40):0;});
     renderPanel(true);paint();toast('댓글 시간과 좋아요를 랜덤으로 채웠어요');},
   moveC:el=>{
-    const i=+el.dataset.i,j=i+(+el.dataset.d),C=S.comments;
+    const p=el.dataset.p,C=listOf(p),i=idxOf(p),j=i+(+el.dataset.d);
     if(j<0||j>=C.length)return;
     [C[i],C[j]]=[C[j],C[i]];
+    const np=p.includes('.')?p.replace(/\.\d+$/,'.'+j):`${j}`;
     renderPanel(true);paint();
-    document.querySelectorAll('.cm')[j]?.scrollIntoView({block:'nearest',behavior:'smooth'});},
-  resetAll:()=>{
-    if(!confirm('글, 사진, 반응 수치, 댓글을 모두 지우고 처음 상태로 돌릴까요? 되돌릴 수 없어요.'))return;
-    const keep={dark:S.dark,scale:S.scale,mark:S.mark,shadow:S.shadow,ooc:S.ooc};
-    S={...JSON.parse(JSON.stringify(DEFAULT)),...keep};
-    tab='post';renderPanel();$('#pbody').scrollTop=0;paint();toast('모든 내용을 초기화했어요');},
-  who:el=>{S.comments[+el.dataset.i].au=el.dataset.v==='1';renderPanel(true);paint();},
-  addC:()=>{S.comments.push({text:'',time:'방금 전',likes:0,au:false});renderPanel(true);paint();
+    document.querySelector(`.cm textarea[data-c="${np}"]`)?.closest('.cm')?.scrollIntoView({block:'nearest',behavior:'smooth'});},
+  who:el=>{getC(el.dataset.p).au=el.dataset.v==='1';renderPanel(true);paint();},
+  addC:()=>{S.comments.push({text:'',time:'방금 전',likes:0,au:false,re:[]});renderPanel(true);paint();
     const all=document.querySelectorAll('.cm');const last=all[all.length-1];
     last?.scrollIntoView({block:'center',behavior:'smooth'});last?.querySelector('textarea')?.focus({preventScroll:true});},
-  delC:el=>{S.comments.splice(+el.dataset.i,1);renderPanel(true);paint();},
+  addRe:el=>{
+    const c=getC(el.dataset.p);c.re=c.re||[];
+    c.re.push({text:'',time:'방금 전',likes:0,au:false});
+    const np=`${el.dataset.p}.${c.re.length-1}`;
+    renderPanel(true);paint();
+    const t=document.querySelector(`.cm textarea[data-c="${np}"]`);
+    t?.closest('.cm')?.scrollIntoView({block:'center',behavior:'smooth'});t?.focus({preventScroll:true});},
+  delC:el=>{
+    const p=el.dataset.p,c=getC(p);
+    if(!p.includes('.')&&c.re?.length&&!confirm(`대댓글 ${c.re.length}개도 같이 지워져요. 삭제할까요?`))return;
+    listOf(p).splice(idxOf(p),1);renderPanel(true);paint();},
   clearC:()=>{if(!confirm('댓글을 모두 지울까요?'))return;S.comments=[];renderPanel(true);paint();},
   copyOoc:async()=>{
     try{await navigator.clipboard.writeText(S.ooc);}
