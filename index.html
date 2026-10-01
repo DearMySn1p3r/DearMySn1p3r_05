@@ -155,9 +155,10 @@ textarea.field{height:auto;padding:12px 14px;line-height:1.65;resize:none;min-he
   box-shadow:0 24px 48px -28px rgba(0,0,0,.22);
   --k-bg:#fff;--k-ink:#19191d;--k-ink2:#4e4e57;--k-mute:#a3a3ad;--k-line:#f0f0f2;--k-soft:#f8f8f9}
 #off{position:fixed;left:-20000px;top:0}
-.shot-pad{display:inline-block;padding:34px 34px 46px}
+.shot-pad{display:inline-block;padding:40px 40px 52px;background:#fff}
+.shot-pad.dk{background:#0f0f12}
 .shot-pad .card{box-shadow:0 26px 50px -22px rgba(20,20,30,.32),0 0 0 1px rgba(0,0,0,.04)}
-.card.flat{box-shadow:none;border-radius:0}
+.card.flat{box-shadow:none}
 .card.dark{--k-bg:#18181c;--k-ink:#f2f2f4;--k-ink2:#b8b8c0;--k-mute:#74747e;--k-line:#26262c;--k-soft:#1e1e23}
 .k-in{padding:26px 26px 0}
 .k-head{display:flex;align-items:center;gap:11px;margin-bottom:20px}
@@ -454,7 +455,7 @@ function V_look(){
   </div>
   <div class="blk">
     <label class="switch">그림자 넣기<input type="checkbox" data-k="shadow" ${S.shadow?'checked':''}><i></i></label>
-    <p class="hint">켜면 둥근 카드에 그림자와 여백이 들어가고, 끄면 그림자 없는 네모 카드로 저장돼요.</p>
+    <p class="hint">켜면 배경 위에 그림자 진 카드로, 끄면 배경 없이 둥근 카드만 저장돼요.</p>
   </div>
   <div class="blk reset-blk">
     <button class="reset" data-act="resetAll">모든 내용 초기화</button>
@@ -567,7 +568,7 @@ async function renderBlob(){
   // 저장용 카드는 화면 밖에 따로 그린다 (미리보기 축소와 상관없이 원래 크기로)
   const host=$('#off');
   const card=cardHTML().replace(' id="card"','');
-  host.innerHTML=S.shadow?`<div class="shot-pad">${card}</div>`:card;
+  host.innerHTML=S.shadow?`<div class="shot-pad ${S.dark?'dk':''}">${card}</div>`:card;
   const node=host.firstElementChild;
   try{
     await Promise.all([...node.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
